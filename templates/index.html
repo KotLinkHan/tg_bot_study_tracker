@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Study Tracker - My Tasks</title>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            --tg-theme-bg-color: #ffffff;
+            --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #999999;
+            --tg-theme-link-color: #2481cc;
+            --tg-theme-button-color: #2481cc;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: #f1f1f1;
+        }
+
+        body {
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-to_do {
+            background-color: #FEF3C7;
+            color: #92400E;
+        }
+
+        .status-in_progress {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .status-done {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+
+        .task-card {
+            background-color: var(--tg-theme-secondary-bg-color);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--tg-theme-button-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--tg-theme-button-color) 0%, #1e3a8a 100%);
+            color: var(--tg-theme-button-text-color);
+            padding: 1.5rem 1rem;
+            margin: -1rem -1rem 1.5rem -1rem;
+            border-radius: 0 0 1.5rem 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .tab-button.active {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+        }
+
+        .tab-button:not(.active) {
+            background-color: transparent;
+            color: var(--tg-theme-hint-color);
+        }
+
+        .complete-btn {
+            background-color: #10B981;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .complete-btn:hover {
+            background-color: #059669;
+            transform: scale(1.05);
+        }
+
+        .complete-btn:disabled {
+            background-color: #9CA3AF;
+            cursor: not-allowed;
+            transform: scale(1);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #D1D5DB;
+            background-color: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-text-color);
+            font-size: 1rem;
+        }
+
+        .primary-btn {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .primary-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .section-card {
+            background-color: var(--tg-theme-secondary-bg-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            z-index: 100;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background-color: var(--tg-theme-bg-color);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--tg-theme-text-color);
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--tg-theme-text-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        textarea.input-field {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .cancel-btn {
+            background-color: #6B7280;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .cancel-btn:hover {
+            background-color: #4B5563;
+        }
+
+        .group-card {
+            background-color: var(--tg-theme-bg-color);
+            border: 2px solid #E5E7EB;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .group-card:hover {
+            border-color: var(--tg-theme-button-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .copy-link-btn {
+            background-color: #F3F4F6;
+            color: #374151;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: 1px solid #D1D5DB;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-link-btn:hover {
+            background-color: #E5E7EB;
+            border-color: #9CA3AF;
+        }
+
+        .copy-link-btn:active {
+            transform: scale(0.95);
+        }
+
+        .members-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .members-modal-content {
+            background-color: var(--tg-theme-bg-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 100%;
+            max-height: 70vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        .member-item {
+            padding: 0.75rem;
+            background-color: var(--tg-theme-secondary-bg-color);
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .delete-btn {
+            background-color: #EF4444;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background-color: #DC2626;
+        }
+
+        .delete-btn:active {
+            transform: scale(0.95);
+        }
+
+        .view-members-btn {
+            background-color: #3B82F6;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-members-btn:hover {
+            background-color: #2563EB;
+        }
+
+        .view-members-btn:active {
+            transform: scale(0.95);
+        }
+
+        .file-btn {
+            background-color: #8B5CF6;
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .file-btn:hover {
+            background-color: #7C3AED;
+        }
+
+        .file-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="p-4 pb-24">
+    <div class="header">
+        <h1 class="text-2xl font-bold mb-1">📚 Study Tracker</h1>
+        <p class="text-sm opacity-90">Your Learning Journey</p>
+    </div>
+
+    <div class="flex gap-2 mb-4 overflow-x-auto">
+        <button class="tab-button active" onclick="switchTab('active')">Активні завдання</button>
+        <button class="tab-button" onclick="switchTab('history')">Історія</button>
+        <button class="tab-button" onclick="switchTab('groups')">Групи</button>
+        <button class="tab-button" onclick="switchTab('guide')">📖 Гайд</button>
+    </div>
+
+    <div id="loading" class="flex flex-col items-center justify-center py-16">
+        <div class="loading-spinner"></div>
+        <p class="mt-4 text-sm" style="color: var(--tg-theme-hint-color);">Loading...</p>
+    </div>
+
+    <div id="empty-state" class="hidden text-center py-16">
+        <div class="text-6xl mb-4">🎉</div>
+        <h2 class="text-xl font-semibold mb-2">All Caught Up!</h2>
+        <p class="text-sm" style="color: var(--tg-theme-hint-color);">You have no tasks here.</p>
+    </div>
+
+    <div id="error-state" class="hidden text-center py-16">
+        <div class="text-6xl mb-4">❌</div>
+        <h2 class="text-xl font-semibold mb-2">Щось пішло не так</h2>
+        <p class="text-sm" style="color: var(--tg-theme-hint-color);" id="error-message">Попробуйте знову.</p>
+    </div>
+
+    <div id="active-tasks-view">
+        <div id="tasks-container" class="hidden">
+            <h2 class="text-lg font-semibold mb-3">Твої активні завдання</h2>
+            <div id="tasks-list"></div>
+        </div>
+    </div>
+
+    <div id="history-view" class="hidden">
+        <div id="history-container" class="hidden">
+            <h2 class="text-lg font-semibold mb-3">Виконані завдання</h2>
+            <div id="history-list"></div>
+        </div>
+    </div>
+
+    <div id="groups-view" class="hidden">
+        <div class="section-card">
+            <h2 class="text-lg font-semibold mb-3">Мої групи</h2>
+
+            <div id="groups-loading" class="flex justify-center py-8">
+                <div class="loading-spinner"></div>
+            </div>
+
+            <div id="groups-empty" class="hidden text-center py-8">
+                <div class="text-4xl mb-2">👥</div>
+                <p class="text-sm" style="color: var(--tg-theme-hint-color);">Ти ще не приєднався ні до одної групи!</p>
+            </div>
+
+            <div id="groups-list" class="hidden"></div>
+        </div>
+
+        <div class="section-card">
+            <h2 class="text-lg font-semibold mb-3">Створити нову групу</h2>
+            <input
+                type="text"
+                id="group-name-input"
+                class="input-field mb-3"
+                placeholder="Введіть ім'я групи..."
+                maxlength="255"
+            />
+            <button class="primary-btn" onclick="createGroup()">Створити групу 🚀</button>
+        </div>
+
+        <div id="group-success" class="hidden section-card" style="background-color: #D1FAE5;">
+            <p class="text-sm font-semibold" style="color: #065F46;">✅ Група успішно створена!</p>
+            <p class="text-xs mt-1" style="color: #065F46;" id="group-invite-link"></p>
+        </div>
+    </div>
+
+    <div id="guide-view" class="hidden">
+        <div class="section-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h2 class="text-2xl font-bold mb-3">👋 Ласкаво просимо!</h2>
+            <p class="text-sm opacity-90">Study Tracker — ваш особистий помічник у навчанні. Створюйте завдання, відстежуйте дедлайни, працюйте в групах і досягайте своїх цілей!</p>
+        </div>
+
+        <div class="section-card">
+            <h3 class="text-xl font-bold mb-3 flex items-center">
+                <span class="text-3xl mr-3">📝</span>
+                Як створювати завдання?
+            </h3>
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">1️⃣</span>
+                    <div>
+                        <p class="font-semibold">Натисніть кнопку "+"</p>
+                        <p class="text-sm" style="color: var(--tg-theme-hint-color);">Знайдіть круглу кнопку внизу праворуч екрану</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">2️⃣</span>
+                    <div>
+                        <p class="font-semibold">Заповніть форму</p>
+                        <p class="text-sm" style="color: var(--tg-theme-hint-color);">Вкажіть назву, опис, дедлайн і групу (за бажанням)</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">3️⃣</span>
+                    <div>
+                        <p class="font-semibold">Створіть завдання!</p>
+                        <p class="text-sm" style="color: var(--tg-theme-hint-color);">Воно з'явиться у вкладці "Active Tasks"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card" style="background-color: #D1FAE5;">
+            <h3 class="text-xl font-bold mb-3 flex items-center" style="color: #065F46;">
+                <span class="text-3xl mr-3">✅</span>
+                Виконання завдань
+            </h3>
+            <p class="text-sm mb-2" style="color: #065F46;">Коли завдання виконано, натисніть кнопку "✅ Complete"</p>
+            <p class="text-sm font-semibold" style="color: #065F46;">🎉 Ви отримаєте +10 XP за кожне виконане завдання!</p>
+            <p class="text-xs mt-2" style="color: #047857;">Завершені завдання можна переглянути у вкладці "History"</p>
+        </div>
+
+        <div class="section-card">
+            <h3 class="text-xl font-bold mb-3 flex items-center">
+                <span class="text-3xl mr-3">👥</span>
+                Робота з групами
+            </h3>
+            <div class="space-y-3">
+                <div>
+                    <p class="font-semibold mb-1">Створення групи:</p>
+                    <p class="text-sm" style="color: var(--tg-theme-hint-color);">Перейдіть у вкладку "Groups", введіть назву та натисніть "Create Group"</p>
+                </div>
+                <div>
+                    <p class="font-semibold mb-1">Запрошення друзів:</p>
+                    <p class="text-sm mb-2" style="color: var(--tg-theme-hint-color);">Скопіюйте посилання запрошення та надішліть друзям</p>
+                    <div style="background-color: #FEF3C7; padding: 0.75rem; border-radius: 0.5rem; border-left: 4px solid #F59E0B;">
+                        <p class="text-sm font-semibold" style="color: #92400E;">💡 Порада:</p>
+                        <p class="text-xs mt-1" style="color: #92400E;">Також можна додати друзів через бота командою <code style="background: #FDE68A; padding: 0.125rem 0.25rem; border-radius: 0.25rem;">/add_friend [посилання]</code></p>
+                    </div>
+                </div>
+                <div>
+                    <p class="font-semibold mb-1">Перегляд учасників:</p>
+                    <p class="text-sm" style="color: var(--tg-theme-hint-color);">Натисніть "👥 View Members" щоб побачити всіх учасників групи</p>
+                </div>
+                <div>
+                    <p class="font-semibold mb-1">Видалення групи:</p>
+                    <p class="text-sm" style="color: var(--tg-theme-hint-color);">Тільки творець групи може видалити її, натиснувши "🗑️ Delete"</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3 class="text-xl font-bold mb-3 flex items-center">
+                <span class="text-3xl mr-3">📎</span>
+                Прикріплення файлів
+            </h3>
+            <p class="text-sm mb-3" style="color: var(--tg-theme-hint-color);">Ви можете прикріпити файли до завдань через Telegram бота:</p>
+            <div style="background-color: #DBEAFE; padding: 0.75rem; border-radius: 0.5rem; border-left: 4px solid #3B82F6;">
+                <p class="text-sm font-semibold mb-2" style="color: #1E40AF;">📤 Як прикріпити файл:</p>
+                <ol class="text-xs space-y-1" style="color: #1E3A8A; list-style: decimal; padding-left: 1.25rem;">
+                    <li>Відкрийте чат з ботом в Telegram</li>
+                    <li>Надішліть файл (документ, фото, відео)</li>
+                    <li>У підписі до файлу вкажіть: <code style="background: #BFDBFE; padding: 0.125rem 0.25rem; border-radius: 0.25rem;">#file_[ID]</code></li>
+                    <li>Де [ID] — це номер вашого завдання</li>
+                </ol>
+                <p class="text-xs mt-2" style="color: #1E3A8A;"><strong>Приклад:</strong> <code style="background: #BFDBFE; padding: 0.125rem 0.25rem; border-radius: 0.25rem;">#file_42 Моя домашка з математики</code></p>
+            </div>
+        </div>
+
+        <div class="section-card" style="background-color: #FEF3C7;">
+            <h3 class="text-xl font-bold mb-3 flex items-center" style="color: #92400E;">
+                <span class="text-3xl mr-3">⏰</span>
+                Нагадування
+            </h3>
+            <p class="text-sm mb-2" style="color: #92400E;">Бот автоматично нагадає вам про дедлайни:</p>
+            <div class="space-y-1 text-sm" style="color: #78350F;">
+                <p>🟡 За 7 днів до дедлайну</p>
+                <p>🟠 За 3 дні до дедлайну</p>
+                <p>🔴 За 1 день до дедлайну</p>
+            </div>
+        </div>
+
+        <div class="section-card" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white;">
+            <h3 class="text-xl font-bold mb-2">🎓 Удачі у навчанні!</h3>
+            <p class="text-sm opacity-90">Використовуйте Study Tracker кожен день, щоб бути організованим і досягати своїх цілей. Вперед до знань! 🚀</p>
+        </div>
+    </div>
+
+    <button class="fab" onclick="openTaskModal()" id="fab-button">+</button>
+
+    <div id="task-modal" class="modal-overlay hidden" onclick="closeTaskModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 class="modal-header">➕ Створити нове завдання</h2>
+
+            <form id="task-form" onsubmit="createTask(event)">
+                <div class="form-group">
+                    <label class="form-label" for="task-title">Title *</label>
+                    <input
+                        type="text"
+                        id="task-title"
+                        class="input-field"
+                        placeholder="Введіть назву завдання..."
+                        required
+                        maxlength="255"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="task-description">Description</label>
+                    <textarea
+                        id="task-description"
+                        class="input-field"
+                        placeholder="Додайте опис (по можливості)..."
+                        maxlength="1000"
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="task-deadline">Deadline *</label>
+                    <input
+                        type="datetime-local"
+                        id="task-deadline"
+                        class="input-field"
+                        required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="task-group">Group (Optional)</label>
+                    <select id="task-group" class="input-field">
+                        <option value="">Personal Task</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="cancel-btn" onclick="closeTaskModal()">Cancel</button>
+                    <button type="submit" class="primary-btn">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="members-modal" class="members-modal hidden" onclick="closeMembersModal(event)">
+        <div class="members-modal-content" onclick="event.stopPropagation()">
+            <h2 class="text-xl font-bold mb-4">👥 Group Members</h2>
+            <div id="members-list"></div>
+            <button class="primary-btn mt-4" onclick="closeMembersModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        if (tg.themeParams) {
+            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+            document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+            document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
+            document.documentElement.style.setProperty('--tg-theme-link-color', tg.themeParams.link_color || '#2481cc');
+            document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#2481cc');
+            document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+            document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f1f1f1');
+        }
+
+        const userId = tg.initDataUnsafe?.user?.id;
+
+        let currentTab = 'active';
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('uk-UA', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getStatusEmoji(status) {
+            const emojis = {
+                'to_do': '⏳',
+                'in_progress': '🔄',
+                'done': '✅'
+            };
+            return emojis[status] || '❓';
+        }
+
+        function getStatusName(status) {
+            const names = {
+                'to_do': 'To Do',
+                'in_progress': 'In Progress',
+                'done': 'Done'
+            };
+            return names[status] || status;
+        }
+
+        async function completeTask(taskId) {
+            try {
+                const button = event.target;
+                button.disabled = true;
+                button.textContent = 'Completing...';
+
+                const response = await fetch(`/api/tasks/${taskId}/complete`, {
+                    method: 'PATCH'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Remove task card with animation
+                const taskCard = button.closest('.task-card');
+                taskCard.style.transition = 'all 0.3s';
+                taskCard.style.opacity = '0';
+                taskCard.style.transform = 'translateX(100%)';
+
+                setTimeout(() => {
+                    taskCard.remove();
+
+                    // Check if there are any tasks left
+                    const tasksList = document.getElementById('tasks-list');
+                    if (tasksList.children.length === 0) {
+                        document.getElementById('tasks-container').classList.add('hidden');
+                        document.getElementById('empty-state').classList.remove('hidden');
+                    }
+                }, 300);
+
+                // Show success notification
+                tg.showAlert('✅ Завдання виконано! +10 XP!');
+
+            } catch (error) {
+                console.error('Error completing task:', error);
+                tg.showAlert('❌ Не вдалось завершити завдання. Попробуйте ще раз пізніше.');
+                button.disabled = false;
+                button.textContent = '✅ Complete';
+            }
+        }
+
+        function createTaskCard(task, showCompleteButton = true) {
+            const completeButton = showCompleteButton && task.status !== 'done'
+                ? `<button class="complete-btn" onclick="completeTask(${task.id})">✅ Виконати</button>`
+                : '';
+
+            const fileButton = task.telegram_file_id
+                ? `<button class="file-btn" onclick="downloadFile(${task.id})">📎 Отримати файл</button>`
+                : '';
+
+            return `
+                <div class="task-card">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg font-semibold flex-1">${getStatusEmoji(task.status)} ${task.title}</h3>
+                        <span class="status-badge status-${task.status} ml-2">${getStatusName(task.status)}</span>
+                    </div>
+                    ${task.description ? `<p class="text-sm mb-3" style="color: var(--tg-theme-hint-color);">${task.description}</p>` : ''}
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="text-xs" style="color: var(--tg-theme-hint-color);">
+                            <span>⏰ Deadline: ${formatDate(task.deadline)}</span>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            ${fileButton}
+                            ${completeButton}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            document.getElementById('active-tasks-view').classList.add('hidden');
+            document.getElementById('history-view').classList.add('hidden');
+            document.getElementById('groups-view').classList.add('hidden');
+            document.getElementById('guide-view').classList.add('hidden');
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('error-state').classList.add('hidden');
+
+            if (tab === 'active') {
+                document.getElementById('active-tasks-view').classList.remove('hidden');
+                fetchActiveTasks();
+            } else if (tab === 'history') {
+                document.getElementById('history-view').classList.remove('hidden');
+                fetchHistory();
+            } else if (tab === 'groups') {
+                document.getElementById('groups-view').classList.remove('hidden');
+                fetchUserGroups();
+            } else if (tab === 'guide') {
+                document.getElementById('guide-view').classList.remove('hidden');
+            }
+        }
+
+        async function fetchActiveTasks() {
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('empty-state');
+            const errorState = document.getElementById('error-state');
+            const tasksContainer = document.getElementById('tasks-container');
+            const tasksList = document.getElementById('tasks-list');
+
+            loading.classList.remove('hidden');
+            tasksContainer.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            errorState.classList.add('hidden');
+
+            try {
+                if (!userId) {
+                    throw new Error('User ID not found. Please open this app from Telegram bot.');
+                }
+
+                const response = await fetch(`/api/users/${userId}/tasks`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const tasks = await response.json();
+
+                const activeTasks = tasks.filter(task => task.status !== 'done');
+
+                loading.classList.add('hidden');
+
+                if (activeTasks.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                tasksContainer.classList.remove('hidden');
+                tasksList.innerHTML = activeTasks.map(task => createTaskCard(task, true)).join('');
+
+            } catch (error) {
+                console.error('Error fetching tasks:', error);
+                loading.classList.add('hidden');
+                errorState.classList.remove('hidden');
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+
+        async function fetchHistory() {
+            const loading = document.getElementById('loading');
+            const emptyState = document.getElementById('empty-state');
+            const errorState = document.getElementById('error-state');
+            const historyContainer = document.getElementById('history-container');
+            const historyList = document.getElementById('history-list');
+
+            loading.classList.remove('hidden');
+            historyContainer.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            errorState.classList.add('hidden');
+
+            try {
+                if (!userId) {
+                    throw new Error('User ID not found. Please open this app from Telegram bot.');
+                }
+
+                const response = await fetch(`/api/users/${userId}/tasks/history`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const tasks = await response.json();
+
+                loading.classList.add('hidden');
+
+                if (tasks.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                historyContainer.classList.remove('hidden');
+                historyList.innerHTML = tasks.map(task => createTaskCard(task, false)).join('');
+
+            } catch (error) {
+                console.error('Error fetching history:', error);
+                loading.classList.add('hidden');
+                errorState.classList.remove('hidden');
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+
+        async function fetchUserGroups() {
+            const groupsLoading = document.getElementById('groups-loading');
+            const groupsEmpty = document.getElementById('groups-empty');
+            const groupsList = document.getElementById('groups-list');
+
+            groupsLoading.classList.remove('hidden');
+            groupsEmpty.classList.add('hidden');
+            groupsList.classList.add('hidden');
+
+            try {
+                if (!userId) {
+                    throw new Error('User ID not found. Please open this app from Telegram bot.');
+                }
+
+                const response = await fetch(`/api/users/${userId}/groups`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const groups = await response.json();
+
+                groupsLoading.classList.add('hidden');
+
+                if (groups.length === 0) {
+                    groupsEmpty.classList.remove('hidden');
+                    return;
+                }
+
+                groupsList.classList.remove('hidden');
+                groupsList.innerHTML = groups.map(group => `
+                    <div class="group-card">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-lg font-semibold">👥 ${group.name}</h3>
+                        </div>
+                        <div class="text-xs mb-2" style="color: var(--tg-theme-hint-color); word-break: break-all;">
+                            ${group.invite_link}
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button class="copy-link-btn" onclick="copyInviteLink('${group.invite_link}')">
+                                📋 Copy
+                            </button>
+                            <button class="view-members-btn" onclick="viewGroupMembers(${group.id})">
+                                👥 View Members
+                            </button>
+                            <button class="delete-btn" onclick="deleteGroup(${group.id})">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error fetching groups:', error);
+                groupsLoading.classList.add('hidden');
+                groupsEmpty.classList.remove('hidden');
+            }
+        }
+
+        async function copyInviteLink(link) {
+            try {
+                await navigator.clipboard.writeText(link);
+                tg.showAlert('✅ Запрошувальне посилання скопійовано!');
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                tg.showAlert('❌ Failed to copy link. Please copy manually.');
+            }
+        }
+
+        async function createGroup() {
+            const groupNameInput = document.getElementById('group-name-input');
+            const groupName = groupNameInput.value.trim();
+
+            if (!groupName) {
+                tg.showAlert('Please enter a group name');
+                return;
+            }
+
+            if (!userId) {
+                tg.showAlert('User ID not found. Please open this app from Telegram bot.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/groups/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: groupName,
+                        creator_tg_id: userId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const group = await response.json();
+
+                groupNameInput.value = '';
+
+                const successDiv = document.getElementById('group-success');
+                const inviteLinkP = document.getElementById('group-invite-link');
+                inviteLinkP.textContent = `Invite Link: ${group.invite_link}`;
+                successDiv.classList.remove('hidden');
+
+                setTimeout(() => {
+                    successDiv.classList.add('hidden');
+                }, 60000);
+
+                tg.showAlert('✅ Група створена!');
+
+                fetchUserGroups();
+
+            } catch (error) {
+                console.error('Error creating group:', error);
+                tg.showAlert('❌ Не вдалось створити групу.');
+            }
+        }
+
+        function openTaskModal() {
+            document.getElementById('task-modal').classList.remove('hidden');
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('task-deadline').min = now.toISOString().slice(0, 16);
+        }
+
+        function closeTaskModal(event) {
+            if (event && event.target !== event.currentTarget) {
+                return;
+            }
+            document.getElementById('task-modal').classList.add('hidden');
+            document.getElementById('task-form').reset();
+        }
+
+        async function createTask(event) {
+            event.preventDefault();
+
+            if (!userId) {
+                tg.showAlert('User ID not found. Please open this app from Telegram bot.');
+                return;
+            }
+
+            const title = document.getElementById('task-title').value.trim();
+            const description = document.getElementById('task-description').value.trim();
+            const deadline = document.getElementById('task-deadline').value;
+            const groupId = document.getElementById('task-group').value;
+
+            if (!title || !deadline) {
+                tg.showAlert('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                const deadlineDate = new Date(deadline);
+
+                const response = await fetch('/api/tasks/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        description: description || null,
+                        deadline: deadlineDate.toISOString(),
+                        creator_tg_id: userId,
+                        group_id: groupId ? parseInt(groupId) : null
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const task = await response.json();
+
+                closeTaskModal();
+
+                tg.showAlert('✅ Завдання успішно створено!');
+
+                if (currentTab === 'active') {
+                    fetchActiveTasks();
+                }
+
+            } catch (error) {
+                console.error('Error creating task:', error);
+                tg.showAlert('❌ Не вдалось створити завдання. Попробуйте ще раз');
+            }
+        }
+
+        async function viewGroupMembers(groupId) {
+            try {
+                const response = await fetch(`/api/groups/${groupId}/members`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const members = await response.json();
+
+                const membersList = document.getElementById('members-list');
+
+                if (members.length === 0) {
+                    membersList.innerHTML = '<p class="text-center text-sm" style="color: var(--tg-theme-hint-color);">No members in this group yet</p>';
+                } else {
+                    membersList.innerHTML = members.map(member => `
+                        <div class="member-item">
+                            <p class="font-semibold">${member.full_name}</p>
+                            ${member.username ? `<p class="text-xs" style="color: var(--tg-theme-hint-color);">@${member.username}</p>` : ''}
+                            <p class="text-xs mt-1" style="color: var(--tg-theme-hint-color);">XP: ${member.xp}</p>
+                        </div>
+                    `).join('');
+                }
+
+                document.getElementById('members-modal').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error fetching group members:', error);
+                tg.showAlert('❌ Failed to load group members. Please try again.');
+            }
+        }
+
+        function closeMembersModal(event) {
+            if (event && event.target !== event.currentTarget) {
+                return;
+            }
+            document.getElementById('members-modal').classList.add('hidden');
+        }
+
+        async function deleteGroup(groupId) {
+            if (!userId) {
+                tg.showAlert('User ID not found. Please open this app from Telegram bot.');
+                return;
+            }
+
+            const confirmed = confirm('Ви впевнені, що хочете видалити цю групу? Цю дію не можна скасувати.');
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/groups/${groupId}?tg_id=${userId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.status === 403) {
+                    tg.showAlert('⛔ Тільки творець може видалити цю групу!');
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                tg.showAlert('✅ Група успішно видалена!');
+
+                // Refresh groups list
+                fetchUserGroups();
+
+            } catch (error) {
+                console.error('Error deleting group:', error);
+                tg.showAlert('❌ Помилка при видаленні групи. Спробуйте ще раз.');
+            }
+        }
+
+        function downloadFile(taskId) {
+            const botUsername = 'deadline_student_bot';
+
+            tg.openTelegramLink(`https://t.me/${botUsername}?start=file_${taskId}`);
+
+            tg.close();
+        }
+
+        fetchActiveTasks();
+    </script>
+</body>
+</html>
